@@ -5,7 +5,10 @@ from flask import Flask, request, jsonify
 from tools import TOOLS, handle_tool_call
 
 app = Flask(__name__)
-client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+_api_key = os.environ.get("ANTHROPIC_API_KEY")
+if not _api_key:
+    raise RuntimeError("ANTHROPIC_API_KEY environment variable is required")
+client = anthropic.Anthropic(api_key=_api_key)
 MODEL = "claude-opus-4-6"
 
 SYSTEM_PROMPT = """You are Hermes, the narrative intelligence for 影境 (Shadow).
@@ -64,8 +67,11 @@ def message():
     user_text = body["text"]
 
     messages.append({"role": "user", "content": user_text})
-    result = run_agent_turn(session_id, messages)
-    return jsonify(result)
+    try:
+        result = run_agent_turn(session_id, messages)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route("/health", methods=["GET"])
