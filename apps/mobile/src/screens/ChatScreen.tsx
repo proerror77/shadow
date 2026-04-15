@@ -1,16 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  FlatList,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  ActivityIndicator,
+  View, Text, TextInput, TouchableOpacity, FlatList,
+  StyleSheet, KeyboardAvoidingView, Platform, ActivityIndicator,
 } from 'react-native';
-import { createSession, sendMessage, connectWebSocket, VideoReadyEvent } from '../api';
+import { sendMessage, connectWebSocket, endSession, VideoReadyEvent } from '../api';
+
+// Simple UUID generator (no external dep)
+function makeId() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
 
 interface Message {
   id: string;
@@ -19,7 +17,8 @@ interface Message {
 }
 
 export default function ChatScreen() {
-  const [sessionId, setSessionId] = useState<string | null>(null);
+  const userId = useRef(makeId()).current;
+  const sessionId = useRef(makeId()).current;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,34 +27,28 @@ export default function ChatScreen() {
   const listRef = useRef<FlatList>(null);
 
   useEffect(() => {
-    createSession().then((sess) => {
-      setSessionId(sess.session_id);
-      wsRef.current = connectWebSocket(sess.session_id, (event) => {
-        setVideoEvents((prev) => [...prev, event]);
-      });
+    wsRef.current = connectWebSocket(sessionId, (event) => {
+      setVideoEvents((prev) => [...prev, event]);
     });
-    return () => wsRef.current?.close();
+    return () => {
+      wsRef.current?.close();
+      endSession(userId);
+    };
   }, []);
 
   const send = useCallback(async () => {
-    if (!input.trim() || !sessionId || loading) return;
+    if (!input.trim() || loading) return;
     const text = input.trim();
     setInput('');
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now().toString(), role: 'user', text },
-    ]);
+    setMessages((prev) => [...prev, { id: makeId(), role: 'user', text }]);
     setLoading(true);
     try {
-      const res = await sendMessage(sessionId, text);
-      setMessages((prev) => [
-        ...prev,
-        { id: (Date.now() + 1).toString(), role: 'assistant', text: res.text },
-      ]);
+      const res = await sendMessage(userId, sessionId, text);
+      setMessages((prev) => [...prev, { id: makeId(), role: 'assistant', text: res.text }]);
     } finally {
       setLoading(false);
     }
-  }, [input, sessionId, loading]);
+  }, [input, loading]);
 
   const renderItem = ({ item }: { item: Message }) => (
     <View style={[styles.bubble, item.role === 'user' ? styles.userBubble : styles.aiBubble]}>
@@ -113,28 +106,17 @@ const styles = StyleSheet.create({
   loader: { marginVertical: 8 },
   inputRow: { flexDirection: 'row', padding: 12, borderTopWidth: 1, borderTopColor: '#1a1a1a' },
   input: {
-    flex: 1,
-    backgroundColor: '#111',
-    color: '#fff',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
+    flex: 1, backgroundColor: '#111', color: '#fff',
+    borderRadius: 20, paddingHorizontal: 16, paddingVertical: 10, fontSize: 15,
   },
   sendBtn: {
-    marginLeft: 8,
-    backgroundColor: '#4a4a8a',
-    borderRadius: 20,
-    paddingHorizontal: 18,
-    justifyContent: 'center',
+    marginLeft: 8, backgroundColor: '#4a4a8a',
+    borderRadius: 20, paddingHorizontal: 18, justifyContent: 'center',
   },
   sendBtnText: { color: '#fff', fontWeight: '600' },
   videoBanner: {
-    backgroundColor: '#1a2a1a',
-    padding: 10,
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#2a3a2a',
+    backgroundColor: '#1a2a1a', padding: 10, alignItems: 'center',
+    borderBottomWidth: 1, borderBottomColor: '#2a3a2a',
   },
   videoBannerText: { color: '#4caf50', fontSize: 13 },
 });

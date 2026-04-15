@@ -1,14 +1,9 @@
-const API_BASE = process.env.EXPO_PUBLIC_API_BASE ?? 'http://localhost:8080';
+const HERMES_BASE = process.env.EXPO_PUBLIC_HERMES_BASE ?? 'http://localhost:8000';
+const WS_BASE = process.env.EXPO_PUBLIC_WS_BASE ?? 'ws://localhost:8001';
 
-export interface Session {
-  session_id: string;
-  current_node: number;
-  total_nodes: number;
-}
-
-export interface MessageResponse {
-  session_id: string;
+export interface ChatResponse {
   text: string;
+  completed: boolean;
 }
 
 export interface VideoReadyEvent {
@@ -19,32 +14,29 @@ export interface VideoReadyEvent {
   video_url: string;
 }
 
-export async function createSession(): Promise<Session> {
-  const res = await fetch(`${API_BASE}/api/v1/sessions`, {
+export async function sendMessage(
+  userId: string,
+  sessionId: string,
+  text: string
+): Promise<ChatResponse> {
+  const res = await fetch(`${HERMES_BASE}/chat`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: '{}',
+    body: JSON.stringify({ user_id: userId, session_id: sessionId, text }),
   });
-  if (!res.ok) throw new Error(`createSession failed: ${res.status}`);
+  if (!res.ok) throw new Error(`chat failed: ${res.status}`);
   return res.json();
 }
 
-export async function sendMessage(sessionId: string, text: string): Promise<MessageResponse> {
-  const res = await fetch(`${API_BASE}/api/v1/sessions/${sessionId}/messages`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
-  });
-  if (!res.ok) throw new Error(`sendMessage failed: ${res.status}`);
-  return res.json();
+export async function endSession(userId: string): Promise<void> {
+  await fetch(`${HERMES_BASE}/users/${userId}`, { method: 'DELETE' });
 }
 
 export function connectWebSocket(
   sessionId: string,
   onVideoReady: (event: VideoReadyEvent) => void
 ): WebSocket {
-  const wsBase = API_BASE.replace(/^http/, 'ws');
-  const ws = new WebSocket(`${wsBase}/ws?session_id=${sessionId}`);
+  const ws = new WebSocket(`${WS_BASE}/ws?session_id=${sessionId}`);
   ws.onmessage = (e) => {
     try {
       const data = JSON.parse(e.data) as VideoReadyEvent;

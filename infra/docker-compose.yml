@@ -11,7 +11,22 @@ services:
       context: ../apps/hermes
       dockerfile: Dockerfile
     ports:
-      - "5001:5001"
+      - "8000:8000"
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
-      - HERMES_PORT=5001
+      - REDIS_URL=redis://redis:6379
+      - HERMES_MODEL=${HERMES_MODEL:-anthropic/claude-opus-4-6}
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: ../apps/worker
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - WS_PORT=8001
+    depends_on:
+      - redis
