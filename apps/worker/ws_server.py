@@ -2,9 +2,9 @@
 WebSocket hub — 管理 session_id → websocket connections。
 Worker 调用 broadcast() 推送 video_ready 事件。
 """
-import asyncio
 import json
 import logging
+import urllib.parse
 from collections import defaultdict
 
 logger = logging.getLogger(__name__)
@@ -39,7 +39,6 @@ async def broadcast(session_id: str, message: dict) -> None:
 
 async def handle_connection(websocket, path=None):
     """Handle incoming WebSocket connection."""
-    import urllib.parse
     # Parse session_id from query string
     query = urllib.parse.parse_qs(urllib.parse.urlparse(websocket.path).query)
     session_ids = query.get("session_id", [])

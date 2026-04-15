@@ -50,6 +50,7 @@ def _handle_trigger_video(node_id: str, scene_description: str, session_id: str)
         "session_id": session_id,
     }
     _rdb.lpush("video:queue", json.dumps(job))
+    _rdb.incr(f"story:progress:{session_id}")
     return json.dumps({"job_id": job_id, "status": "queued"})
 
 

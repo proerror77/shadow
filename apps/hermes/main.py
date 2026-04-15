@@ -1,9 +1,8 @@
 """
 影境 Hermes Agent — FastAPI HTTP 服务
 """
-import os
 import shadow_tools  # noqa: F401 — 注册自定义工具到 registry
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI
 from pydantic import BaseModel
 from agent_pool import get_agent, remove_agent
 

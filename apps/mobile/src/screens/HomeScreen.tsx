@@ -10,7 +10,12 @@ export default function HomeScreen({ onStart }: Props) {
     <View style={styles.container}>
       <Text style={styles.title}>影境</Text>
       <Text style={styles.subtitle}>你的故事，你来导演</Text>
-      <TouchableOpacity style={styles.btn} onPress={onStart}>
+      <TouchableOpacity
+        style={styles.btn}
+        onPress={onStart}
+        accessibilityRole="button"
+        accessibilityLabel="开始故事，进入互动叙事体验"
+      >
         <Text style={styles.btnText}>开始故事</Text>
       </TouchableOpacity>
     </View>
