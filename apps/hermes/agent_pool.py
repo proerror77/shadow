@@ -9,8 +9,9 @@ from run_agent import AIAgent
 _pool: dict[str, AIAgent] = {}
 _lock = Lock()
 
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-MODEL = os.environ.get("HERMES_MODEL", "anthropic/claude-opus-4-6")
+OPENROUTER_API_KEY = os.environ["OPENROUTER_API_KEY"]
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+MODEL = os.environ.get("HERMES_MODEL", "nousresearch/hermes-3-llama-3.1-70b")
 
 SYSTEM_PROMPT = """你是影境（Shadow）的叙事 AI，一个沉浸式 AI 陪伴游戏的核心角色。
 
@@ -32,7 +33,8 @@ def get_agent(user_id: str) -> AIAgent:
     with _lock:
         if user_id not in _pool:
             _pool[user_id] = AIAgent(
-                api_key=ANTHROPIC_API_KEY,
+                api_key=OPENROUTER_API_KEY,
+                base_url=OPENROUTER_BASE_URL,
                 model=MODEL,
                 user_id=user_id,
                 ephemeral_system_prompt=SYSTEM_PROMPT,

@@ -13,9 +13,9 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - REDIS_URL=redis://redis:6379
-      - HERMES_MODEL=${HERMES_MODEL:-anthropic/claude-opus-4-6}
+      - HERMES_MODEL=${HERMES_MODEL:-nousresearch/hermes-3-llama-3.1-70b}
     depends_on:
       - redis
 
