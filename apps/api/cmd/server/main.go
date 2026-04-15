@@ -29,6 +29,10 @@ func main() {
 	sessionHandler := handler.NewSessionHandler(store, hermesBase)
 	internalHandler := handler.NewInternalHandler(rdb)
 
+	hub := handler.NewHub()
+	go hub.Run()
+	wsHandler := handler.NewWSHandler(hub)
+
 	r := gin.Default()
 
 	v1 := r.Group("/api/v1")
@@ -43,9 +47,21 @@ func main() {
 		internal.GET("/sessions/:id/progress", internalHandler.GetProgress)
 	}
 
-	// Start video worker in background
+	r.GET("/ws", wsHandler.GinServeWS)
+
+	// N-2 strategy: broadcast video-ready to session clients when job completes
+	onComplete := func(result *video.Result) {
+		hub.Broadcast(result.SessionID, handler.VideoReadyMessage{
+			Type:      "video_ready",
+			JobID:     result.JobID,
+			NodeID:    result.NodeID,
+			SessionID: result.SessionID,
+			VideoURL:  result.VideoURL,
+		})
+	}
+
 	adapter := video.NewMockAdapter()
-	w := worker.NewVideoWorker(rdb, adapter, nil)
+	w := worker.NewVideoWorker(rdb, adapter, onComplete)
 	go w.Run(context.Background())
 
 	port := os.Getenv("PORT")
