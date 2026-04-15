@@ -1,12 +1,16 @@
 package main
 
 import (
+	"context"
 	"log"
 	"os"
 
 	"github.com/gin-gonic/gin"
+	"github.com/redis/go-redis/v9"
 	"github.com/shadow/api/internal/handler"
 	"github.com/shadow/api/internal/story"
+	"github.com/shadow/api/internal/video"
+	"github.com/shadow/api/internal/worker"
 )
 
 func main() {
@@ -15,15 +19,34 @@ func main() {
 		hermesBase = "http://localhost:5001"
 	}
 
+	redisAddr := os.Getenv("REDIS_ADDR")
+	if redisAddr == "" {
+		redisAddr = "localhost:6379"
+	}
+	rdb := redis.NewClient(&redis.Options{Addr: redisAddr})
+
 	store := story.NewInMemoryStore()
 	sessionHandler := handler.NewSessionHandler(store, hermesBase)
+	internalHandler := handler.NewInternalHandler(rdb)
 
 	r := gin.Default()
+
 	v1 := r.Group("/api/v1")
 	{
 		v1.POST("/sessions", sessionHandler.CreateSession)
 		v1.POST("/sessions/:id/messages", sessionHandler.SendMessage)
 	}
+
+	internal := r.Group("/internal")
+	{
+		internal.POST("/video/queue", internalHandler.QueueVideo)
+		internal.GET("/sessions/:id/progress", internalHandler.GetProgress)
+	}
+
+	// Start video worker in background
+	adapter := video.NewMockAdapter()
+	w := worker.NewVideoWorker(rdb, adapter, nil)
+	go w.Run(context.Background())
 
 	port := os.Getenv("PORT")
 	if port == "" {
