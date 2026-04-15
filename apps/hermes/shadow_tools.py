@@ -10,6 +10,7 @@ from tools.registry import registry
 
 REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
 _rdb = redis.from_url(REDIS_URL)
+MAX_VIDEO_NODES_PER_SESSION = 12
 
 # ── trigger_video_node ────────────────────────────────────────────────────────
 
@@ -42,6 +43,21 @@ TRIGGER_VIDEO_SCHEMA = {
 
 
 def _handle_trigger_video(node_id: str, scene_description: str, session_id: str) -> str:
+    progress_key = f"story:progress:{session_id}"
+    node_count = int(_rdb.get(progress_key) or 0)
+    if node_count >= MAX_VIDEO_NODES_PER_SESSION:
+        return json.dumps({
+            "status": "rejected",
+            "reason": "video_node_limit_reached",
+            "message": (
+                f"Session {session_id} already reached the maximum of "
+                f"{MAX_VIDEO_NODES_PER_SESSION} video nodes."
+            ),
+            "session_id": session_id,
+            "nodes_triggered": node_count,
+            "max_video_nodes": MAX_VIDEO_NODES_PER_SESSION,
+        })
+
     job_id = str(uuid.uuid4())
     job = {
         "job_id": job_id,
@@ -50,7 +66,7 @@ def _handle_trigger_video(node_id: str, scene_description: str, session_id: str)
         "session_id": session_id,
     }
     _rdb.lpush("video:queue", json.dumps(job))
-    _rdb.incr(f"story:progress:{session_id}")
+    _rdb.incr(progress_key)
     return json.dumps({"job_id": job_id, "status": "queued"})
 
 
@@ -86,8 +102,8 @@ def _handle_get_progress(session_id: str) -> str:
     return json.dumps({
         "session_id": session_id,
         "nodes_triggered": node_count,
-        "nodes_remaining": max(0, 12 - node_count),
-        "total_nodes": 12,
+        "nodes_remaining": max(0, MAX_VIDEO_NODES_PER_SESSION - node_count),
+        "total_nodes": MAX_VIDEO_NODES_PER_SESSION,
     })
 
 
