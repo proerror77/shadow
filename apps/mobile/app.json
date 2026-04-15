@@ -1,0 +1,10 @@
+{
+  "expo": {
+    "name": "影境",
+    "slug": "shadow",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "shadow",
+    "platforms": ["ios", "android"]
+  }
+}

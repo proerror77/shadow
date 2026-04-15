@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  api:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      - REDIS_ADDR=redis:6379
+      - HERMES_BASE=http://hermes:5001
+      - PORT=8080
+    depends_on:
+      - redis
+      - hermes
+
+  hermes:
+    build:
+      context: ../apps/hermes
+      dockerfile: Dockerfile
+    ports:
+      - "5001:5001"
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - GO_API_BASE=http://api:8080
+      - HERMES_PORT=5001
