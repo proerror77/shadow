@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  hermes:
+    build:
+      context: ../apps/hermes
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - REDIS_URL=redis://redis:6379
+      - HERMES_MODEL=${HERMES_MODEL:-nousresearch/hermes-3-llama-3.1-70b}
+    depends_on:
+      - redis
+
+  worker:
+    build:
+      context: ../apps/worker
+      dockerfile: Dockerfile
+    ports:
+      - "8001:8001"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - WS_PORT=8001
+    depends_on:
+      - redis

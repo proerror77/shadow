@@ -6,32 +6,19 @@ on:
       - main
 
 jobs:
-  go:
-    name: Go API
+  python:
+    name: Python Checks
     runs-on: ubuntu-latest
-    if: |
-      contains(github.event.pull_request.changed_files, 'apps/api') ||
-      github.event_name == 'pull_request'
-    defaults:
-      run:
-        working-directory: apps/api
     steps:
       - uses: actions/checkout@v4
 
-      - name: Set up Go
-        uses: actions/setup-go@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          go-version-file: apps/api/go.mod
-          cache-dependency-path: apps/api/go.sum
+          python-version: '3.11'
 
-      - name: Vet
-        run: go vet ./...
-
-      - name: Test
-        run: go test ./...
-
-      - name: Build
-        run: go build ./...
+      - name: Compile hermes and worker
+        run: python -m py_compile apps/hermes/*.py apps/worker/*.py
 
   expo:
     name: Expo Mobile
